@@ -25,7 +25,7 @@ with st.sidebar:
     st.header("Configuration")
     model_version = st.selectbox(
         "AI Model", 
-        ["gemini-2.5-flash", "gemini-2.5-pro"],
+        ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3-flash-preview"],
         index=0
     )
     st.divider()
