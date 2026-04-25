@@ -18,99 +18,92 @@ else:
 
 # --- UI HEADER ---
 st.title("🚀 ABAP-to-Functional Spec AI")
-st.markdown("""
-**Documentation Agent for Product Managers & SAP Consultants.** Paste your ABAP code below to generate a professional Business-Ready Functional Specification.
-""")
+st.markdown("Automated documentation for SAP Consultants. Upload an ABAP file or paste code below.")
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.header("Settings")
+    st.header("Configuration")
     model_version = st.selectbox(
         "AI Model", 
-        ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3-flash-preview"],
-        help="2.5-Flash is the standard stable workhorse. 2.5-Pro is better for deep logic."
+        ["gemini-2.5-flash", "gemini-2.5-pro"],
+        index=0
     )
-    st.info("Ensure your code follows company privacy policies before pasting.")
+    st.divider()
+    st.info("Supported files: .abap, .txt, .sap")
 
 # --- MAIN INTERFACE ---
 col1, col2 = st.columns([1, 1])
 
 with col1:
-    st.subheader("Source Code")
-    abap_input = st.text_area(
-        "Paste ABAP Code Here:", 
-        height=500, 
-        placeholder="REPORT Z_SALES_ANALYSIS..."
-    )
+    st.subheader("Input Source")
+    
+    # 1. File Uploader Component
+    uploaded_file = st.file_uploader("Upload ABAP File", type=['abap', 'txt', 'sap'])
+    
+    # 2. Text Area (as fallback)
+    st.markdown("**OR** paste your code here:")
+    abap_input = st.text_area("", height=300, placeholder="REPORT Z_SALES_ANALYSIS...")
+
+    # Logic to decide which input to use
+    final_code = ""
+    if uploaded_file is not None:
+        # Read the file and convert to string
+        final_code = uploaded_file.read().decode("utf-8")
+        st.success(f"File '{uploaded_file.name}' loaded successfully!")
+    else:
+        final_code = abap_input
 
 with col2:
     st.subheader("Generated Specification")
     
-    if st.button("Analyze & Generate"):
-        if not abap_input:
-            st.warning("Please paste some code first!")
+    if st.button("Generate Spec & PDF"):
+        if not final_code:
+            st.warning("Please upload a file or paste code first!")
         else:
-            with st.spinner("AI is reverse-engineering the logic..."):
+            with st.spinner("Analyzing ABAP logic..."):
                 try:
-                    # 1. Initialize Gemini
                     model = genai.GenerativeModel(model_version)
                     
-                    # 2. Structured Prompt
                     prompt = f"""
-                    Act as a Lead SAP Functional Consultant and Product Manager. 
+                    Act as a Lead SAP Functional Consultant. 
                     Analyze the following ABAP code and create a professional Functional Specification (FS).
                     
-                    The document must include:
-                    - DOCUMENT METADATA: Program Name, Purpose, and Date.
-                    - FUNCTIONAL OVERVIEW: A high-level business explanation (No technical jargon).
-                    - SELECTION CRITERIA: List of all parameters and select-options.
-                    - BUSINESS LOGIC: Step-by-step breakdown of how data is processed.
-                    - DATA ARCHITECTURE: Identify all source tables (e.g., MARA, VBAK) and fields.
-                    - PM INSIGHT: Suggest one way this code could be optimized for business ROI.
+                    STRUCTURE:
+                    1. DOCUMENT METADATA (Program Name, Date)
+                    2. FUNCTIONAL OVERVIEW (Business purpose)
+                    3. SELECTION CRITERIA (Parameters/Select-options)
+                    4. BUSINESS LOGIC (Step-by-step processing)
+                    5. TABLES & FIELDS (Data sources)
+                    6. PM INSIGHT (Optimization suggestion)
 
                     ABAP CODE:
-                    {abap_input}
+                    {final_code}
                     """
                     
-                    # 3. Generate Content
                     response = model.generate_content(prompt)
                     fs_text = response.text
                     
-                    # 4. Display Result
                     st.markdown(fs_text)
                     
-                    # --- PDF GENERATION ---
+                    # PDF GENERATION
                     pdf = FPDF()
                     pdf.add_page()
-                    pdf.set_font("Arial", size=11)
-                    
-                    # Format text for PDF compatibility
-                    # We use 'replace' to handle non-latin characters Gemini might output
-                    clean_text = fs_text.encode('latin-1', 'replace').decode('latin-1')
-                    
-                    # Add Title to PDF
-                    pdf.set_font("Arial", 'B', 16)
-                    pdf.cell(0, 10, "Functional Specification Document", ln=True, align='C')
-                    pdf.ln(5)
                     pdf.set_font("Arial", size=10)
-                    pdf.multi_cell(0, 10, txt=clean_text)
                     
-                    # CRITICAL FIX: Convert bytearray to bytes for Streamlit
+                    # Handle encoding for PDF
+                    clean_text = fs_text.encode('latin-1', 'replace').decode('latin-1')
+                    pdf.multi_cell(0, 8, txt=clean_text)
+                    
+                    # Convert to bytes for download
                     pdf_data = pdf.output()
                     pdf_bytes = bytes(pdf_data)
                     
                     st.download_button(
-                        label="📥 Download as PDF",
+                        label="📥 Download PDF",
                         data=pdf_bytes,
                         file_name=f"FS_Report_{datetime.date.today()}.pdf",
                         mime="application/pdf"
                     )
                     
                 except Exception as e:
-                    st.error(f"An error occurred: {e}")
-    else:
-        st.info("The generated spec will appear here.")
-
-# --- FOOTER ---
-st.divider()
-st.caption("Powered by Google Gemini | Built for the SAP Ecosystem")
+                    st.error(f"Error: {e}")
