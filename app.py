@@ -27,8 +27,8 @@ with st.sidebar:
     st.header("Settings")
     model_version = st.selectbox(
         "AI Model", 
-        ["gemini-1.5-flash", "gemini-1.5-pro"],
-        help="Flash is faster; Pro is better for very complex logic."
+        ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3-flash-preview"]],
+        help= "2.5-Flash is the standard stable workhorse. 2.5-Pro is better for deep logic."
     )
     st.info("Ensure your code follows company privacy policies before pasting.")
 
